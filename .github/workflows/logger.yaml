@@ -65,6 +65,8 @@ jobs:
           const yesterdayIST = convertToIST(yesterday);
           const todayIST = convertToIST(today);
 
+          console.log(`Scanning commits between ${yesterdayIST} and ${todayIST}`);
+
             // Get all user's repositories with pagination
             const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
               per_page: 100,
@@ -75,7 +77,7 @@ jobs:
 
             for (const repo of repos) {
               try {
-                console.log(`Scanning ${repo.full_name}`);
+                // console.log(`Scanning ${repo.full_name}`);
 
                 // Get all open PRs in the repository
                 const pullRequests = await octokit.paginate(octokit.pulls.list, {
@@ -94,7 +96,7 @@ jobs:
                   )
                 );
 
-                console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
+                // console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
 
                 for (const pr of userPRs) {
                   // Get commits from the PR
