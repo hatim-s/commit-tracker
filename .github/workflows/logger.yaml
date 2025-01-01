@@ -53,17 +53,17 @@ jobs:
           }
 
           // Set yesterday and today in IST
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          yesterday.setHours(0, 0, 0, 0);
+          const yesterdayIST = convertToIST(new Date());
+          yesterdayIST.setDate(yesterdayIST.getDate() - 1);
+          yesterdayIST.setHours(0, 0, 0, 0);
 
-          const today = new Date();
-          today.setDate(today.getDate() - 1);
-          today.setHours(23, 59, 59, 999);
+          const todayIST = convertToIST(new Date());
+          todayIST.setDate(todayIST.getDate() - 1);
+          todayIST.setHours(23, 59, 59, 999);
 
           // Convert to UTC for GitHub API
-          const yesterdayIST = convertToIST(yesterday);
-          const todayIST = convertToIST(today);
+          const yesterday = convertToUTC(yesterdayIST);
+          const today = convertToUTC(todayIST);
 
           console.log(`Scanning commits between ${yesterdayIST} and ${todayIST}`);
 
