@@ -90,11 +90,11 @@ jobs:
               // Filter PRs by the user
               const userPRs = pullRequests.filter(pr =>
                 pr.user.login === process.env.GITHUB_ACTOR && (
-                  new Date(pr.updated_at) >= yesterdayIST
+                  convertToIST(new Date(pr.updated_at)) >= yesterdayIST
                 )
               );
 
-              // console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
+              console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
 
               for (const pr of userPRs) {
                 // Get commits from the PR
@@ -107,11 +107,11 @@ jobs:
 
                 // Filter commits by date and author
                 const filteredCommits = prCommits.filter(commit => {
-                  const commitDate = new Date(commit.commit.author.date);
+                  const commitDate = convertToIST(new Date(commit.commit.author.date));
                   return (
                     commit.author?.login === process.env.GITHUB_ACTOR &&
-                    convertToIST(commitDate) >= yesterdayIST &&
-                    convertToIST(commitDate) <= todayIST
+                    commitDate >= yesterdayIST &&
+                    commitDate <= todayIST
                   );
                 });
 
@@ -137,8 +137,8 @@ jobs:
                 owner: repo.owner.login,
                 repo: repo.name,
                 author: process.env.GITHUB_ACTOR,
-                since: yesterday.toISOString(),
-                until: today.toISOString(),
+                since: convertToUTC(yesterdayIST).toISOString(),
+                until: convertToUTC(todayIST).toISOString(),
                 per_page: 100
               });
 
