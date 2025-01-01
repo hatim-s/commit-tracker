@@ -123,27 +123,27 @@ jobs:
       - name: Checkout logs repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.actor }}/commit-logs
+          repository: ${{ github.actor }}/commit-tracker
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: commit-logs
+          path: commit-tracker
 
       - name: Update logs repository
         run: |
           # Create logs directory if it doesn't exist
-          mkdir -p commit-logs/logs/${{ steps.date.outputs.date }}
+          mkdir -p commit-tracker/logs/${{ steps.date.outputs.date }}
 
           # Move the generated log file
-          mv commit-log.md commit-logs/logs/${{ steps.date.outputs.date }}/README.md
+          mv commit-log.md commit-tracker/logs/${{ steps.date.outputs.date }}/LOG.md
 
           # Update the main README if it exists
-          if [ -f commit-logs/README.md ]; then
-            sed -i "1i - [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" commit-logs/README.md
+          if [ -f commit-tracker/LOG.md ]; then
+            sed -i "1i - [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" commit-tracker/LOG.md
           else
-            echo "# Daily Commit Logs\n\n- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" > commit-logs/README.md
+            echo "# Daily Commit Logs\n\n- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" > commit-tracker/LOG.md
           fi
 
           # Configure git
-          cd commit-logs
+          cd commit-tracker
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
