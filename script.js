@@ -13,23 +13,21 @@ async function getCommits() {
   today.setDate(today.getDate() - 1);
   today.setHours(23, 59, 59, 999);
 
-  // Get user's repositories
-  const { data: repos } = await octokit.repos.listForAuthenticatedUser({
+  // Get all repositories with pagination
+  const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
     per_page: 100,
     sort: "updated",
   });
-
-  console.log({ repos: repos.map((repo) => repo.name) });
 
   let allCommits = [];
 
   for (const repo of repos) {
     try {
-      // Get all branches
-      const { data: branches } = await octokit.repos.listBranches({
+      // Get all branches with pagination
+      const branches = await octokit.paginate(octokit.repos.listBranches, {
         owner: repo.owner.login,
         repo: repo.name,
-        per_page: 1000,
+        per_page: 100,
       });
 
       console.log(`Scanning ${branches.length} branches in ${repo.full_name}`);
@@ -54,7 +52,7 @@ async function getCommits() {
           timestamp: commit.commit.author.date,
         }));
 
-        allCommits = [...allCommits, ...repoCommits];
+        allCommits = [...allCommits, ...branchCommits];
       }
     } catch (error) {
       console.error(

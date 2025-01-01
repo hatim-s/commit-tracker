@@ -58,6 +58,8 @@ jobs:
 
             let allCommits = [];
 
+            console.log(`Scanning ${repos.length} repositories`, { repo: repos[0] });
+
             for (const repo of repos) {
               try {
                 // Get all branches with pagination
@@ -67,7 +69,7 @@ jobs:
                   per_page: 100,
                 });
 
-                console.log(`Scanning ${branches.length} branches in ${repo.full_name}`);
+                console.log(`Scanning ${branches.length} branches in ${repo.full_name}`, { branch: branches[0] });
 
                 // Fetch commits from each branch
                 for (const branch of branches) {
@@ -81,17 +83,23 @@ jobs:
                     per_page: 100,
                   });
 
-                  const branchCommits = commits.map(commit => ({
+                  console.log('commits', {commit: commits[0]});
+
+                  const branchCommits = commits.map((commit) => ({
                     repo: repo.full_name,
                     branch: branch.name,
                     message: commit.commit.message,
                     url: commit.html_url,
-                    timestamp: commit.commit.author.date
+                    timestamp: commit.commit.author.date,
                   }));
 
-                allCommits = [...allCommits, ...repoCommits];
+                  allCommits = [...allCommits, ...branchCommits];
+                }
               } catch (error) {
-                console.error(`Error fetching commits for ${repo.full_name}:`, error.message);
+                console.error(
+                  `Error fetching commits for ${repo.full_name}:`,
+                  error.message,
+                );
               }
             }
 
@@ -102,7 +110,7 @@ jobs:
             let markdown = `# Commit Log for ${process.env.LOG_DATE}\n\n`;
 
             if (allCommits.length === 0) {
-              markdown += '📭 No commits found for this day.\n';
+              markdown += "📭 No commits found for this day.\n";
             } else {
               markdown += `📝 Total Commits: ${allCommits.length}\n\n`;
 
@@ -130,16 +138,16 @@ jobs:
                 // Display commits grouped by branch
                 for (const [branch, branchCommits] of Object.entries(commitsByBranch)) {
                   markdown += `### 🌿 ${branch}\n\n`;
-                  branchCommits.forEach(commit => {
-                    const time = new Date(commit.timestamp).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit'
+                  branchCommits.forEach((commit) => {
+                    const time = new Date(commit.timestamp).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
                     });
-                    markdown += `- \`${time}\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+                    markdown += `- \`${time}\` [${commit.message.split("\n")[0]}](${commit.url})\n`;
                   });
-                  markdown += '\n';
-                });
-                markdown += '\n';
+                  markdown += "\n";
+                }
+                markdown += "\n";
               }
             }
 
@@ -147,6 +155,7 @@ jobs:
           }
 
           getCommits().catch(console.error);
+
           EOF
 
       - name: Install dependencies
@@ -190,4 +199,4 @@ jobs:
           # Commit and push changes
           git add .
           git commit -m "📝 Add commit log for ${{ steps.date.outputs.date }}"
-          git push
+          git push -f
