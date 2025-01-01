@@ -23,7 +23,7 @@ jobs:
       - name: Create Commit Log Script
         run: |
           cat > get-commits.js << 'EOF'
-          const { Octokit } = require('@octokit/rest');
+          const { Octokit } = import ('@octokit/rest');
 
           async function getCommits() {
             const octokit = new Octokit({
