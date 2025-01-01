@@ -2,7 +2,7 @@ name: Daily Commit Logger
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Runs at midnight UTC
+    - cron: "30 18 * * *" # Runs at midnight IST
   workflow_dispatch: # Allows manual trigger
 
 jobs:
@@ -42,13 +42,28 @@ jobs:
               auth: process.env.GITHUB_TOKEN
             });
 
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            yesterday.setHours(0, 0, 0, 0);
+            // Function to convert UTC to IST
+          function convertToIST(date) {
+            return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+          }
 
-            const today = new Date();
-            today.setDate(today.getDate() - 1);
-            today.setHours(23, 59, 59, 999);
+          // Function to convert IST to UTC
+          function convertToUTC(date) {
+            return new Date(date.getTime() - (5.5 * 60 * 60 * 1000));
+          }
+
+          // Set yesterday and today in IST
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          yesterday.setHours(0, 0, 0, 0);
+
+          const today = new Date();
+          today.setDate(today.getDate() - 1);
+          today.setHours(23, 59, 59, 999);
+
+          // Convert to UTC for GitHub API
+          const yesterdayIST = convertToIST(yesterday);
+          const todayIST = convertToIST(today);
 
             // Get all user's repositories with pagination
             const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
@@ -75,7 +90,7 @@ jobs:
                 // Filter PRs by the user
                 const userPRs = pullRequests.filter(pr =>
                   pr.user.login === process.env.GITHUB_ACTOR && (
-                    new Date(pr.updated_at) >= yesterday
+                    new Date(pr.updated_at) >= yesterdayIST
                   )
                 );
 
@@ -95,8 +110,8 @@ jobs:
                     const commitDate = new Date(commit.commit.author.date);
                     return (
                       commit.author?.login === process.env.GITHUB_ACTOR &&
-                      commitDate >= yesterday &&
-                      commitDate <= today
+                      convertToIST(commitDate) >= yesterdayIST &&
+                      convertToIST(commitDate) <= todayIST
                     );
                   });
 
@@ -187,11 +202,12 @@ jobs:
                 if (data.directCommits.length > 0) {
                   markdown += `### 🔨 Direct Commits\n\n`;
                   data.directCommits.forEach(commit => {
-                    const time = new Date(commit.timestamp).toLocaleTimeString('en-US', {
+                    const istTime = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-IN', {
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      hour12: true
                     });
-                    markdown += `- \`${time}\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+                    markdown += `- \`${istTime} IST\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
                   });
                   markdown += '\n';
                 }
@@ -201,7 +217,7 @@ jobs:
                   const stateEmoji = prData.pr.state === 'open' ? '🟢' : '🟣';
                   markdown += `### ${stateEmoji} [PR ${prKey}](${prData.pr.url})\n\n`;
                   prData.commits.forEach(commit => {
-                    const time = new Date(commit.timestamp).toLocaleTimeString('en-US', {
+                    const time = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit'
                     });
@@ -259,4 +275,4 @@ jobs:
           # Commit and push changes
           git add .
           git commit -m "📝 Add commit log for ${{ steps.date.outputs.date }}"
-          git push -f
+          git push
