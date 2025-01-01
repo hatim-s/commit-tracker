@@ -20,10 +20,22 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Create package.json
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "name": "commit-tracker",
+            "type": "module",
+            "dependencies": {
+              "@octokit/rest": "^20.0.0"
+            }
+          }
+          EOF
+
       - name: Create Commit Log Script
         run: |
           cat > get-commits.js << 'EOF'
-          const { Octokit } = import ('@octokit/rest');
+          import { Octokit } from '@octokit/rest';
 
           async function getCommits() {
             const octokit = new Octokit({
