@@ -12,8 +12,8 @@ jobs:
       - name: Get current date
         id: date
         run: |
-          echo "date=$(date -d 'yesterday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "full_date=$(date -d 'yesterday' +'%B %d, %Y')" >> $GITHUB_OUTPUT
+          echo "date=$(TZ='Asia/Kolkata' date -d 'yesterday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "full_date=$(TZ='Asia/Kolkata' date -d 'yesterday' +'%B %d, %Y')" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,184 +53,182 @@ jobs:
           }
 
           // Set yesterday and today in IST
-          const yesterdayIST = convertToIST(new Date());
+          let yesterdayIST = convertToIST(new Date());
           yesterdayIST.setDate(yesterdayIST.getDate() - 1);
           yesterdayIST.setHours(0, 0, 0, 0);
+          yesterdayIST = convertToIST(yesterdayIST);
 
-          const todayIST = convertToIST(new Date());
+          let todayIST = convertToIST(new Date());
           todayIST.setDate(todayIST.getDate() - 1);
           todayIST.setHours(23, 59, 59, 999);
-
-          // Convert to UTC for GitHub API
-          const yesterday = convertToUTC(yesterdayIST);
-          const today = convertToUTC(todayIST);
+          todayIST = convertToIST(todayIST);
 
           console.log(`Scanning commits between ${yesterdayIST} and ${todayIST}`);
 
-            // Get all user's repositories with pagination
-            const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
-              per_page: 100,
-              sort: 'updated'
-            });
+          // Get all user's repositories with pagination
+          const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
+            per_page: 100,
+            sort: 'updated'
+          });
 
-            let allCommits = new Map(); // Using Map to avoid duplicate commits
+          let allCommits = new Map(); // Using Map to avoid duplicate commits
 
-            for (const repo of repos) {
-              try {
-                // console.log(`Scanning ${repo.full_name}`);
+          for (const repo of repos) {
+            try {
+              // console.log(`Scanning ${repo.full_name}`);
 
-                // Get all open PRs in the repository
-                const pullRequests = await octokit.paginate(octokit.pulls.list, {
+              // Get all open PRs in the repository
+              const pullRequests = await octokit.paginate(octokit.pulls.list, {
+                owner: repo.owner.login,
+                repo: repo.name,
+                state: 'all', // Get both open and closed PRs
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 100
+              });
+
+              // Filter PRs by the user
+              const userPRs = pullRequests.filter(pr =>
+                pr.user.login === process.env.GITHUB_ACTOR && (
+                  new Date(pr.updated_at) >= yesterdayIST
+                )
+              );
+
+              // console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
+
+              for (const pr of userPRs) {
+                // Get commits from the PR
+                const prCommits = await octokit.paginate(octokit.pulls.listCommits, {
                   owner: repo.owner.login,
                   repo: repo.name,
-                  state: 'all', // Get both open and closed PRs
-                  sort: 'updated',
-                  direction: 'desc',
+                  pull_number: pr.number,
                   per_page: 100
                 });
 
-                // Filter PRs by the user
-                const userPRs = pullRequests.filter(pr =>
-                  pr.user.login === process.env.GITHUB_ACTOR && (
-                    new Date(pr.updated_at) >= yesterdayIST
-                  )
-                );
-
-                // console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
-
-                for (const pr of userPRs) {
-                  // Get commits from the PR
-                  const prCommits = await octokit.paginate(octokit.pulls.listCommits, {
-                    owner: repo.owner.login,
-                    repo: repo.name,
-                    pull_number: pr.number,
-                    per_page: 100
-                  });
-
-                  // Filter commits by date and author
-                  const filteredCommits = prCommits.filter(commit => {
-                    const commitDate = new Date(commit.commit.author.date);
-                    return (
-                      commit.author?.login === process.env.GITHUB_ACTOR &&
-                      convertToIST(commitDate) >= yesterdayIST &&
-                      convertToIST(commitDate) <= todayIST
-                    );
-                  });
-
-                  // Add commits to the map using SHA as key to avoid duplicates
-                  filteredCommits.forEach(commit => {
-                    allCommits.set(commit.sha, {
-                      repo: repo.full_name,
-                      pr: {
-                        number: pr.number,
-                        title: pr.title,
-                        url: pr.html_url,
-                        state: pr.state
-                      },
-                      message: commit.commit.message,
-                      url: commit.html_url,
-                      timestamp: commit.commit.author.date
-                    });
-                  });
-                }
-
-                // Also get direct commits to default branch
-                const defaultBranchCommits = await octokit.paginate(octokit.repos.listCommits, {
-                  owner: repo.owner.login,
-                  repo: repo.name,
-                  author: process.env.GITHUB_ACTOR,
-                  since: yesterday.toISOString(),
-                  until: today.toISOString(),
-                  per_page: 100
+                // Filter commits by date and author
+                const filteredCommits = prCommits.filter(commit => {
+                  const commitDate = new Date(commit.commit.author.date);
+                  return (
+                    commit.author?.login === process.env.GITHUB_ACTOR &&
+                    convertToIST(commitDate) >= yesterdayIST &&
+                    convertToIST(commitDate) <= todayIST
+                  );
                 });
 
-                defaultBranchCommits.forEach(commit => {
+                // Add commits to the map using SHA as key to avoid duplicates
+                filteredCommits.forEach(commit => {
                   allCommits.set(commit.sha, {
                     repo: repo.full_name,
-                    pr: null,
+                    pr: {
+                      number: pr.number,
+                      title: pr.title,
+                      url: pr.html_url,
+                      state: pr.state
+                    },
                     message: commit.commit.message,
                     url: commit.html_url,
                     timestamp: commit.commit.author.date
                   });
                 });
-
-              } catch (error) {
-                console.error(`Error processing ${repo.full_name}:`, error.message);
               }
+
+              // Also get direct commits to default branch
+              const defaultBranchCommits = await octokit.paginate(octokit.repos.listCommits, {
+                owner: repo.owner.login,
+                repo: repo.name,
+                author: process.env.GITHUB_ACTOR,
+                since: yesterday.toISOString(),
+                until: today.toISOString(),
+                per_page: 100
+              });
+
+              defaultBranchCommits.forEach(commit => {
+                allCommits.set(commit.sha, {
+                  repo: repo.full_name,
+                  pr: null,
+                  message: commit.commit.message,
+                  url: commit.html_url,
+                  timestamp: commit.commit.author.date
+                });
+              });
+
+            } catch (error) {
+              console.error(`Error processing ${repo.full_name}:`, error.message);
             }
+          }
 
-            // Convert Map to Array and sort by timestamp
-            const sortedCommits = Array.from(allCommits.values())
-              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          // Convert Map to Array and sort by timestamp
+          const sortedCommits = Array.from(allCommits.values())
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-            // Generate markdown
-            let markdown = `# Commit Log for ${process.env.LOG_DATE}\n\n`;
+          // Generate markdown
+          let markdown = `# Commit Log for ${process.env.LOG_DATE}\n\n`;
 
-            if (sortedCommits.length === 0) {
-              markdown += '📭 No commits found for this day.\n';
-            } else {
-              markdown += `📝 Total Commits: ${sortedCommits.length}\n\n`;
+          if (sortedCommits.length === 0) {
+            markdown += '📭 No commits found for this day.\n';
+          } else {
+            markdown += `📝 Total Commits: ${sortedCommits.length}\n\n`;
 
-              // Group commits by repository
-              const commitsByRepo = sortedCommits.reduce((acc, commit) => {
-                if (!acc[commit.repo]) {
-                  acc[commit.repo] = {
-                    directCommits: [],
-                    prCommits: {}
+            // Group commits by repository
+            const commitsByRepo = sortedCommits.reduce((acc, commit) => {
+              if (!acc[commit.repo]) {
+                acc[commit.repo] = {
+                  directCommits: [],
+                  prCommits: {}
+                };
+              }
+
+              if (commit.pr) {
+                const prKey = `#${commit.pr.number} - ${commit.pr.title}`;
+                if (!acc[commit.repo].prCommits[prKey]) {
+                  acc[commit.repo].prCommits[prKey] = {
+                    pr: commit.pr,
+                    commits: []
                   };
                 }
+                acc[commit.repo].prCommits[prKey].commits.push(commit);
+              } else {
+                acc[commit.repo].directCommits.push(commit);
+              }
 
-                if (commit.pr) {
-                  const prKey = `#${commit.pr.number} - ${commit.pr.title}`;
-                  if (!acc[commit.repo].prCommits[prKey]) {
-                    acc[commit.repo].prCommits[prKey] = {
-                      pr: commit.pr,
-                      commits: []
-                    };
-                  }
-                  acc[commit.repo].prCommits[prKey].commits.push(commit);
-                } else {
-                  acc[commit.repo].directCommits.push(commit);
-                }
+              return acc;
+            }, {});
 
-                return acc;
-              }, {});
+            // Generate markdown for each repository
+            for (const [repo, data] of Object.entries(commitsByRepo)) {
+              markdown += `## 📁 ${repo}\n\n`;
 
-              // Generate markdown for each repository
-              for (const [repo, data] of Object.entries(commitsByRepo)) {
-                markdown += `## 📁 ${repo}\n\n`;
-
-                // Add direct commits if any
-                if (data.directCommits.length > 0) {
-                  markdown += `### 🔨 Direct Commits\n\n`;
-                  data.directCommits.forEach(commit => {
-                    const istTime = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-IN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    });
-                    markdown += `- \`${istTime} IST\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+              // Add direct commits if any
+              if (data.directCommits.length > 0) {
+                markdown += `### 🔨 Direct Commits\n\n`;
+                data.directCommits.forEach(commit => {
+                  const istTime = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
                   });
-                  markdown += '\n';
-                }
+                  markdown += `- \`${istTime} IST\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+                });
+                markdown += '\n';
+              }
 
-                // Add PR commits
-                for (const [prKey, prData] of Object.entries(data.prCommits)) {
-                  const stateEmoji = prData.pr.state === 'open' ? '🟢' : '🟣';
-                  markdown += `### ${stateEmoji} [PR ${prKey}](${prData.pr.url})\n\n`;
-                  prData.commits.forEach(commit => {
-                    const time = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-                    markdown += `- \`${time}\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+              // Add PR commits
+              for (const [prKey, prData] of Object.entries(data.prCommits)) {
+                const stateEmoji = prData.pr.state === 'open' ? '🟢' : '🟣';
+                markdown += `### ${stateEmoji} [PR ${prKey}](${prData.pr.url})\n\n`;
+                prData.commits.forEach(commit => {
+                  const time = convertToIST(new Date(commit.timestamp)).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
                   });
-                  markdown += '\n';
-                }
+                  markdown += `- \`${time}\` [${commit.message.split('\n')[0]}](${commit.url})\n`;
+                });
+                markdown += '\n';
               }
             }
+          }
 
-            console.log(markdown);
+          console.log(markdown);
           }
 
           getCommits().catch(console.error);
