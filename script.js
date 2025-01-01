@@ -19,31 +19,41 @@ async function getCommits() {
     sort: "updated",
   });
 
-  console.log("repos", { repos: repos.map((repo) => repo.name) });
-
   let allCommits = [];
 
   for (const repo of repos) {
     try {
-      const { data: commits } = await octokit.repos.listCommits({
+      // Get all branches
+      const { data: branches } = await octokit.repos.listBranches({
         owner: repo.owner.login,
         repo: repo.name,
-        author: process.env.GITHUB_ACTOR,
-        since: yesterday.toISOString(),
-        until: new Date().toISOString(),
         per_page: 100,
       });
 
-      console.log("commits", { commits, repo: repo.name });
+      // console.log(`Scanning ${branches.length} branches in ${repo.full_name}`);
 
-      const repoCommits = commits.map((commit) => ({
-        repo: repo.full_name,
-        message: commit.commit.message,
-        url: commit.html_url,
-        timestamp: commit.commit.author.date,
-      }));
+      // Fetch commits from each branch
+      for (const branch of branches) {
+        const { data: commits } = await octokit.repos.listCommits({
+          owner: repo.owner.login,
+          repo: repo.name,
+          sha: branch.name,
+          author: process.env.GITHUB_ACTOR,
+          since: yesterday.toISOString(),
+          until: today.toISOString(),
+          per_page: 100,
+        });
 
-      allCommits = [...allCommits, ...repoCommits];
+        const branchCommits = commits.map((commit) => ({
+          repo: repo.full_name,
+          branch: branch.name,
+          message: commit.commit.message,
+          url: commit.html_url,
+          timestamp: commit.commit.author.date,
+        }));
+
+        allCommits = [...allCommits, ...repoCommits];
+      }
     } catch (error) {
       console.error(
         `Error fetching commits for ${repo.full_name}:`,
@@ -54,8 +64,6 @@ async function getCommits() {
 
   // Sort commits by timestamp
   allCommits.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  console.log("allCommits", { allCommits });
 
   // Generate markdown
   let markdown = `# Commit Log for ${process.env.LOG_DATE}\n\n`;
@@ -77,13 +85,27 @@ async function getCommits() {
     // Generate markdown for each repository
     for (const [repo, commits] of Object.entries(commitsByRepo)) {
       markdown += `## 📁 ${repo}\n\n`;
-      commits.forEach((commit) => {
-        const time = new Date(commit.timestamp).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
+      // Group commits by branch
+      const commitsByBranch = commits.reduce((acc, commit) => {
+        if (!acc[commit.branch]) {
+          acc[commit.branch] = [];
+        }
+        acc[commit.branch].push(commit);
+        return acc;
+      }, {});
+
+      // Display commits grouped by branch
+      for (const [branch, branchCommits] of Object.entries(commitsByBranch)) {
+        markdown += `### 🌿 ${branch}\n\n`;
+        branchCommits.forEach((commit) => {
+          const time = new Date(commit.timestamp).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          markdown += `- \`${time}\` [${commit.message.split("\n")[0]}](${commit.url})\n`;
         });
-        markdown += `- \`${time}\` [${commit.message.split("\n")[0]}](${commit.url})\n`;
-      });
+        markdown += "\n";
+      }
       markdown += "\n";
     }
   }
