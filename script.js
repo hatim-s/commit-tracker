@@ -19,6 +19,8 @@ async function getCommits() {
     sort: "updated",
   });
 
+  console.log({ repos: repos.map((repo) => repo.name) });
+
   let allCommits = [];
 
   for (const repo of repos) {
@@ -27,10 +29,10 @@ async function getCommits() {
       const { data: branches } = await octokit.repos.listBranches({
         owner: repo.owner.login,
         repo: repo.name,
-        per_page: 100,
+        per_page: 1000,
       });
 
-      // console.log(`Scanning ${branches.length} branches in ${repo.full_name}`);
+      console.log(`Scanning ${branches.length} branches in ${repo.full_name}`);
 
       // Fetch commits from each branch
       for (const branch of branches) {
