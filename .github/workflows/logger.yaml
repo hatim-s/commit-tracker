@@ -63,7 +63,7 @@ jobs:
           todayIST.setHours(23, 59, 59, 999);
           todayIST = convertToIST(todayIST);
 
-          console.log(`Scanning commits between ${yesterdayIST} and ${todayIST}`);
+          // console.log(`Scanning commits between ${yesterdayIST} and ${todayIST}`);
 
           // Get all user's repositories with pagination
           const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
@@ -93,8 +93,6 @@ jobs:
                   convertToIST(new Date(pr.updated_at)) >= yesterdayIST
                 )
               );
-
-              console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
 
               for (const pr of userPRs) {
                 // Get commits from the PR
