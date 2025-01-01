@@ -74,7 +74,9 @@ jobs:
 
                 // Filter PRs by the user
                 const userPRs = pullRequests.filter(pr =>
-                  pr.user.login === process.env.GITHUB_ACTOR
+                  pr.user.login === process.env.GITHUB_ACTOR && (
+                    new Date(pr.updated_at) >= yesterday
+                  )
                 );
 
                 console.log(`Found ${userPRs.length} PRs`, userPRs[0]);
