@@ -260,9 +260,7 @@ jobs:
 
           # Update the main README if it exists
           if [ -f commit-tracker/README.md ]; then
-            sed -i '' '$a\
-            [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }}/LOG.md)\
-            ' commit-tracker/README.md
+          echo "- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }}/LOG.md)" >> commit-tracker/README.md
           else
             echo "# Daily Commit Logs\n\n- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" > commit-tracker/README.md
           fi
