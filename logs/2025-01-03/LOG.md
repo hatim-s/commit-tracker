@@ -22,8 +22,8 @@
 
 ### 🟢 [PR #7356 - refactor: schema generator](https://github.com/unify-apps/www/pull/7356)
 
-- `04:05 PM` [fix: null check](https://github.com/unify-apps/www/commit/100c1c4114e37d9253bffc8cd0a8fcbee6098695)
-- `03:59 PM` [fix: no undefined in template strings](https://github.com/unify-apps/www/commit/75595c81adf5e03730aa3850619f0712ab1d70b0)
-- `03:20 PM` [fix: do not assign, but mutate](https://github.com/unify-apps/www/commit/1afe26d940e6ccf8d14e0d0b5d77578a2f3d733c)
+- `04:05 PM` [fix: null check](https://github.com/unify-apps/www/commit/515086e7b0e074fe3ff414b9652579485bf26c7c)
+- `03:59 PM` [fix: no undefined in template strings](https://github.com/unify-apps/www/commit/2f1f4883f6a94f9007c5bcf8dfafbbdf0fa300ef)
+- `03:20 PM` [fix: do not assign, but mutate](https://github.com/unify-apps/www/commit/c277c0fd556a27fef4807d2161777f01e4b24ca1)
 
 
