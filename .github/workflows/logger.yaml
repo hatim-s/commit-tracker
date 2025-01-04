@@ -259,10 +259,10 @@ jobs:
           mv commit-log.md commit-tracker/logs/${{ steps.date.outputs.date }}/LOG.md
 
           # Update the main README if it exists
-          if [ -f commit-tracker/LOG.md ]; then
-            sed -i "1i - [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }}/LOG.md)" commit-tracker/LOG.md
+          if [ -f commit-tracker/README.md ]; then
+            sed -i "1i - [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }}/LOG.md)" commit-tracker/README.md
           else
-            echo "# Daily Commit Logs\n\n- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" > commit-tracker/LOG.md
+            echo "# Daily Commit Logs\n\n- [${{ steps.date.outputs.full_date }}](logs/${{ steps.date.outputs.date }})" > commit-tracker/README.md
           fi
 
           # Configure git
