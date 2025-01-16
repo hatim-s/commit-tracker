@@ -18,3 +18,4 @@ The goal of this is to keep a track of actual work done on a daily basis, the hi
 - [January 13, 2025](logs/2025-01-13/LOG.md)
 - [January 14, 2025](logs/2025-01-14/LOG.md)
 - [January 15, 2025](logs/2025-01-15/LOG.md)
+- [January 16, 2025](logs/2025-01-16/LOG.md)
