@@ -105,3 +105,4 @@ The goal of this is to keep a track of actual work done on a daily basis, the hi
 - [April 10, 2025](logs/2025-04-10/LOG.md)
 - [April 11, 2025](logs/2025-04-11/LOG.md)
 - [April 12, 2025](logs/2025-04-12/LOG.md)
+- [April 13, 2025](logs/2025-04-13/LOG.md)
