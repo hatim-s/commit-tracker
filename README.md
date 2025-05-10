@@ -126,3 +126,4 @@ The goal of this is to keep a track of actual work done on a daily basis, the hi
 - [May 07, 2025](logs/2025-05-07/LOG.md)
 - [May 08, 2025](logs/2025-05-08/LOG.md)
 - [May 09, 2025](logs/2025-05-09/LOG.md)
+- [May 10, 2025](logs/2025-05-10/LOG.md)
